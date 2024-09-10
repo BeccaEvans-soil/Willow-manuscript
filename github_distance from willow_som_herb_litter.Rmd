@@ -1,0 +1,84 @@
+---
+title: "2018 litter/moss, herb, som distance from willow"
+author: "Becca Evans"
+date: "2022-07-15"
+output: html_document
+---
+
+```{r}
+setwd("C:/Users/becca/Dropbox/Becca-John PhD share/DATA/2021 soils")
+#packages
+library(tidyverse)
+library(gridExtra)
+library(dplyr)
+library(lme4)
+library(emmeans)#constrasts
+library(lmerTest)
+library(ggplot2)
+library(MASS)
+library(ggpubr)
+
+
+
+```
+
+```{r}
+#data prep
+dist <- read.csv("2018_litter_som_herb_distance from willow.csv")
+names(dist)
+ #[1] "site"          "n.treat"       "weevil"        "block"         "plot"          "coordinate"   
+ #[7] "distance"      "distance_0.5m" "litter_g"      "herb_g"        "som_g"     
+
+dist$n.treat <- factor(dist$n.treat)
+dist$coordinate <- factor(dist$coordinate)
+dist$block <- factor(dist$block)
+dist$plot <- factor(dist$plot)
+dist$plot.unq <- factor(dist$plot.unq)
+str(dist)
+
+jitter <- position_jitter(width = 0.1, height = 0.1)
+
+```
+
+remove distances >2.5m
+```{r}
+dist_less2 <- dist %>% filter(distance<=2)
+```
+
+
+test effect of distance on litter/moss
+```{r}
+str(dist)
+littermoss_dist_mod <- lmer(log(litter_g+1)~weevil+distance+weevil:distance+n.treat+(1|plot.unq),data=dist)
+anova(littermoss_dist_mod)
+summary(littermoss_dist_mod)
+plot(littermoss_dist_mod) 
+qqnorm(resid(littermoss_dist_mod))  
+qqline(resid(littermoss_dist_mod))
+```
+
+
+
+test effect of distance on herb
+```{r}
+
+herb_dist_mod <- lmer(log(herb_g+1)~weevil+distance+weevil:distance+n.treat+(1|plot.unq),data=dist)
+anova(herb_dist_mod)
+summary(herb_dist_mod)
+plot(herb_dist_mod) 
+qqnorm(resid(herb_dist_mod))  
+qqline(resid(herb_dist_mod))
+```
+
+
+
+test effect of distance on som
+```{r}
+
+som_dist_mod <- lmer(log(som_g+1)~weevil+distance+weevil:distance+n.treat+(1|plot.unq),data=dist)
+anova(som_dist_mod)
+summary(som_dist_mod)
+plot(som_dist_mod) 
+qqnorm(resid(som_dist_mod))  
+qqline(resid(som_dist_mod))
+```

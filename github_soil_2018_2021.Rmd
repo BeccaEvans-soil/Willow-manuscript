@@ -1,0 +1,445 @@
+---
+title: "soil cores 2021 nwere"
+author: "Becca Evans"
+date: '2022-04-15'
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+setwd("C:/Users/becca/Dropbox/Becca-John PhD share/DATA/2021 soils")
+#packages
+library(tidyverse)
+library(dplyr)
+library(lme4)
+library(emmeans)#constrasts
+library(lmerTest)
+library(ggplot2)
+library(MASS)
+library(car) #multicollinarity 
+```
+
+```{r}
+#data prep
+
+CN <- read.csv("nwere_2018_2021soils_allparameters.csv")
+
+#remove 8 
+CN_all <- CN %>% filter(n.treat!="8")
+head(CN_all)
+names(CN_all)
+names(CN_all)[names(CN_all) == "X21_d13c"] <- "d13c_21"
+names(CN_all)[names(CN_all) ==  "X21_mg.c.gsoil"] <- "C_21"
+names(CN_all)[names(CN_all) ==  "X21_d15n"] <- "d15n_21"
+names(CN_all)[names(CN_all) ==  "X21_mg.n.gsoil"] <- "N_21"
+names(CN_all)[names(CN_all) ==  "X18_mg.c.gsoil"] <- "C_18"
+names(CN_all)[names(CN_all) ==  "X18_mg.n.gsoil"] <- "N_18"
+
+
+
+
+CN_all$replicate <- factor(CN_all$replicate)
+CN_all$n.treat <- factor(CN_all$n.treat)
+CN_all$plot <- factor(CN_all$plot)
+CN_all$block <- factor(CN_all$block)
+str(CN_all)
+names(CN_all)
+
+```
+
+means C,N d13c, d15n no rep for figs include BD becuase this was the only thing sig use all data
+```{r}
+names(CN)
+std.error <- function(x) sqrt(var(x,na.rm=TRUE)/length(na.omit(x)))
+soil.summary <- CN %>% group_by(n.treat, weevil, site,block)%>%
+  summarise_at(c("X21_d15n","X21_mg.n.gsoil","X18_mg.c.gsoil","X18_mg.n.gsoil","X21_d13c","X21_mg.c.gsoil", "bd.pits.g.cm3.2018","sum.13","sum.14","sum.21","litter_kg_m2_mean","herb_kg_m2_mean","som_kg_m2_mean","litter_kg_m2_std.error" ,"herb_kg_m2_std.error" ,"som_kg_m2_std.error","numberwillow","numberother","totalnumber","willowstemdiam","otherstemdiam","totalstemdiam"), funs(mean, std.error))
+
+dodge <- position_dodge(.3)
+```
+ 
+ Select only primary 
+ 
+ #clean data
+ 
+```{r}
+CN$replicate <- factor(CN$replicate)
+CN$n.treat <- factor(CN$n.treat)
+CN$plot <- factor(CN$plot)
+CN$block <- factor(CN$block)
+str(CN)
+
+```
+ 
+
+```{r}
+pri_cn_rep <- filter(CN,site=="East"|site=="West" )
+pri_cn_norep <- filter(soil.summary, site=="East"|site=="West")
+```
+
+Select only secondary
+
+```{r}
+sec_cn_rep <- filter(CN,site=="Norway"|site=="Harmony" )
+sec_cn_norep <- filter(soil.summary, site=="Norway"|site=="Harmony")
+```
+
+
+Figure summary for by site
+names(CN)
+
+```{r}
+std.error <- function(x) sqrt(var(x,na.rm=TRUE)/length(na.omit(x)))
+soil.summary_site <- CN %>% group_by(n.treat, weevil, site)%>%
+    summarise_at(c("d13c_21","C_21","d15n_21","d15n_21","N_21","C_18","N_18", "bd.pits.g.cm3.2018","sum.13","sum.14","sum.21","litter_kg_m2_mean","herb_kg_m2_mean","som_kg_m2_mean","litter_kg_m2_std.error" ,"herb_kg_m2_std.error" ,"som_kg_m2_std.error","numberwillow","numberother","totalnumber","willowstemdiam","otherstemdiam",          "totalstemdiam"), 
+               funs(mean, std.error))
+```
+ 
+ Select only primary for site
+
+```{r}
+pri_cn_norep_site <- filter(soil.summary_site, site=="East"|site=="West")
+write.csv(pri_cn_norep_site, "pri_cn_norep_site.csv")
+pri_cn_norep_site <- read.csv("pri_cn_norep_site.csv")
+
+pri_cn_norep_site$n.treat <- factor(pri_cn_norep_site$n.treat)
+
+
+```
+
+Select only secondary for site
+
+```{r}
+sec_cn_norep_site <- filter(soil.summary_site, site=="Norway"|site=="Harmony")
+write.csv(sec_cn_norep_site, "sec_cn_norep_site.csv")
+sec_cn_norep_site <- read.csv("sec_cn_norep_site.csv")
+sec_cn_norep_site$n.treat <- factor(sec_cn_norep_site$n.treat)
+```
+
+
+#######################
+##########################
+
+STATS
+
+primary and secondary 0 and 16 N only 
+```{r}
+
+soilc_21_site <- lmer(log(C_21)~n.treat+weevil+succession+weevil:succession+n.treat:succession+(1|plot.unq),data=CN_all)
+anova(soilc_21_site)
+summary(soilc_21_site)
+
+step(soilc_21_site)
+
+soilc_21_site <- lmer(log(C_21)~succession+weevil+(1|plot.unq),data=CN_all)
+anova(soilc_21_site)
+summary(soilc_21_site)
+
+r.squaredGLMM(soilc_21_site)
+plot(soilc_21_site)
+qqnorm(resid(soilc_21_site))   
+qqline(resid(soilc_21_site))
+
+```
+
+Primary Stats 
+
+Carbon east west stats
+
+
+SOIL C 2021
+FINAL C MODEL
+```{r}
+names(pri_cn_rep)
+soilc_21_site <- lmer(log(X21_mg.c.gsoil)~n.treat*weevil+(1|plot.unq),data=pri_cn_rep)
+anova(soilc_21_site)
+summary(soilc_21_site)
+
+step(soilc_21_site)
+soilc_21_site <- lmer(log(X21_mg.c.gsoil)~weevil+(1|plot.unq),data=pri_cn_rep)
+anova(soilc_21_site)
+summary(soilc_21_site)
+
+r.squaredGLMM(soilc_21_site)
+plot(soilc_21_site)
+qqnorm(resid(soilc_21_site))   
+qqline(resid(soilc_21_site))
+
+```
+
+
+SOIL N 2021
+Final N pri sec 
+```{r}
+soiln_21_site <- lmer(log(N_21)~n.treat+weevil+succession+succession:n.treat+succession:weevil+(1|plot.unq),data=CN_all)
+anova(soiln_21_site)
+summary(soiln_21_site)
+
+
+r.squaredGLMM(soiln_21_site)
+plot(soilc_21_site)
+qqnorm(resid(soilc_21_site))   
+qqline(resid(soilc_21_site))
+```
+
+
+N east west stats
+
+
+SOIL N 2021
+FINAL N MODEL
+```{r}
+names(pri_cn_rep)
+soiln_21_site <- lmer(log(X21_mg.n.gsoil)~n.treat*weevil+(1|plot.unq),data=pri_cn_rep)
+anova(soiln_21_site)
+summary(soiln_21_site)
+
+r.squaredGLMM(soilc_21_site)
+plot(soilc_21_site)
+qqnorm(resid(soilc_21_site))   
+qqline(resid(soilc_21_site))
+
+```
+
+Final d13c model pri sec 
+```{r}
+soil_d13c_21 <- lmer(d13c_21~n.treat+weevil+succession+weevil:succession+weevil:succession+(1|plot.unq),data=CN_all)
+anova(soil_d13c_21)
+summary(soil_d13c_21)
+plot(soil_d13c_21)
+qqnorm(resid(soil_d13c_21))  
+qqline(resid(soil_d13c_21)) 
+```
+
+SOIL d13c 2021 primary
+```{r}
+names(pri_cn_rep)
+str(pri_cn_rep)
+
+soil_d13c_21<- lmer(X21_d13c~n.treat*weevil+(1|plot.unq),data=pri_cn_rep)
+anova(soil_d13c_21)
+summary(soil_d13c_21)
+plot(soil_d13c_21)
+qqnorm(resid(soil_d13c_21))   
+qqline(resid(soil_d13c_21))
+```
+
+
+
+Final d15n model pri sec 
+```{r}
+soil_d15n_21 <- lmer(d15n_21~n.treat+weevil+succession+weevil:succession+weevil:succession+(1|plot.unq),data=CN_all)
+anova(soil_d15n_21)
+summary(soil_d15n_21)
+plot(soil_d15n_21)
+qqnorm(resid(soil_d15n_21))  
+qqline(resid(soil_d15n_21)) 
+```
+
+
+SOIL d15n 2021 primary
+```{r}
+soil_d15n_21<- lmer(X21_d15n~n.treat*weevil+(1|plot.unq),data=pri_cn_rep)
+anova(soil_d15n_21)
+summary(soil_d15n_21)
+plot(soil_d15n_21)
+qqnorm(resid(soil_d15n_21))   
+qqline(resid(soil_d15n_21))
+```
+
+
+
+##########################################
+############################################
+############################################
+
+EFFECTS OF PH MOISUTRE BD ON SOIL C N D13C D15 ph, bd, moist effects on soil c 2021 across pri and sec NO EFFECT 
+```{r}
+C_21_ph_bd_moist_sec <- lmer(log(C_21)~pH2019+percent.moist2019+bd.cores.g.cm3.2021+(1|plot.unq),data=CN_all)
+anova(C_21_ph_bd_moist_sec)
+summary(C_21_ph_bd_moist_sec)
+plot(C_21_ph_bd_moist_sec)
+qqnorm(resid(C_21_ph_bd_moist_sec))  
+qqline(resid(C_21_ph_bd_moist_sec))
+```
+
+
+ph, bd, moist effects on soil N 2021 NO EFFECT 
+```{r}
+N_21_ph_bd_moist_sec <- lmer(log(N_21)~pH2019+percent.moist2019+bd.cores.g.cm3.2021+(1|plot.unq),data=CN_all)
+anova(N_21_ph_bd_moist_sec)
+summary(N_21_ph_bd_moist_sec)
+plot(N_21_ph_bd_moist_sec)
+qqnorm(resid(N_21_ph_bd_moist_sec))  
+qqline(resid(N_21_ph_bd_moist_sec))
+```
+
+ph, bd, moist effects on d13c 2021 NO EFFECT 
+```{r}
+d13c_21_ph_bd_moist_sec <- lmer(d13c_21~pH2019+percent.moist2019+bd.cores.g.cm3.2021+(1|plot.unq),data=CN_all)
+anova(d13c_21_ph_bd_moist_sec)
+summary(d13c_21_ph_bd_moist_sec)
+plot(d13c_21_ph_bd_moist_sec)
+qqnorm(resid(d13c_21_ph_bd_moist_sec))  
+qqline(resid(d13c_21_ph_bd_moist_sec))
+```
+
+ph, bd, moist effects on d15n 2021 NO EFFECT
+```{r}
+d15n_21_ph_bd_moist_sec <- lmer(d15n_21~pH2019+percent.moist2019+bd.cores.g.cm3.2021+(1|plot.unq),data=CN_all)
+anova(d15n_21_ph_bd_moist_sec)
+summary(d15n_21_ph_bd_moist_sec)
+plot(d15n_21_ph_bd_moist_sec)
+qqnorm(resid(d15n_21_ph_bd_moist_sec))  
+qqline(resid(d15n_21_ph_bd_moist_sec))
+```
+
+
+################################
+################################
+#############################
+##############################################
+LITTER AND HERB EFFECTS ON SOIL C,N, D13C, D135 PRIMARY DON'T HAVE THIS DATA FOR SECONDARY
+
+
+###############################
+#####################################
+###################################
+LITTER AND HERB STATS EFFECTS OF TREATMENTS 
+
+data
+names(CN)
+```{r}
+std.error <- function(x) sqrt(var(x,na.rm=TRUE)/length(na.omit(x)))
+pitdata_2018 <- CN_all %>% group_by(n.treat, weevil, site, plot.unq, block)%>%
+summarise_at(c("d13c_21","C_21","d15n_21","d15n_21","N_21","C_18","N_18", "sum.13","sum.14","sum.21","litter_kg_m2_mean","herb_kg_m2_mean","som_kg_m2_mean","litter_kg_m2_std.error" ,"herb_kg_m2_std.error" ,"som_kg_m2_std.error","pH2019", "percent.moist2019", "bd.cores.g.cm3.2021",    "bd.pits.g.cm3.2018"), 
+               funs(mean, std.error))
+               
+pitdata_2018 <-pitdata_2018 %>% filter(site=="East"|site=="West")             
+               
+```
+names(pitdata_2018)
+
+LITTER MOSS MOD NO EFFECT 
+
+```{r}
+littermod_a<- lmer(log(litter_kg_m2_mean_mean)~n.treat*weevil+(1|block),data=pitdata_2018)
+anova(littermod_a)
+summary(littermod_a)
+plot(littermod_a)
+qqnorm(resid(littermod_a))  
+qqline(resid(littermod_a))
+```
+
+
+
+LITTER MOSS MOD BY SITE NO EFFECT 
+```{r}
+littermod_b<- lmer(log(litter_kg_m2_mean_mean)~n.treat*weevil*site+(1|block),data=pitdata_2018)
+anova(littermod_b)
+summary(littermod_b)
+plot(littermod_b)
+qqnorm(resid(littermod_b))  
+qqline(resid(littermod_b))
+```
+
+
+SOM MOD with site 
+```{r}
+#SOM
+som_a<- lmer(log(som_kg_m2_mean_mean)~n.treat*weevil*site+(1|block),data=pitdata_2018)
+anova(som_a)
+summary(som_a)
+plot(som_a)
+qqnorm(resid(som_a))  
+qqline(resid(som_a))
+```
+
+HERB MOD
+```{r}
+herb_a<- lmer(log(herb_kg_m2_mean_mean)~n.treat*weevil*site+(1|block),data=pitdata_2018)
+anova(herb_a)
+summary(herb_a)
+plot(herb_a)
+qqnorm(resid(herb_a))  
+qqline(resid(herb_a))
+```
+
+
+
+###############################
+####################################
+#####################################
+
+EFFECT of LITTER/MOSS, HERB, SOM  ON SOIL C AND N d13c d15n STATS only have this data for pri
+
+
+Litter and herb and SOM and site effects on soil C 2021 NO EFFECT
+```{r}
+C_21_litter_herb_som_site <- lmer(log(C_21)~litter_kg_m2_mean+herb_kg_m2_mean+som_kg_m2_mean+som_kg_m2_mean:site+litter_kg_m2_mean:site+herb_kg_m2_mean:site+(1|plot.unq),data=pri_cn_rep)
+anova(C_21_litter_herb_som_site)
+summary(C_21_litter_herb_som_site)
+plot(C_21_litter_herb_som_site)
+qqnorm(resid(C_21_litter_herb_som_site))  
+qqline(resid(C_21_litter_herb_som_site))
+
+
+```
+
+Litter and herb and SOM and site effects on soil N 2021 NO EFFECT
+```{r}
+N_21_litter_herb_som_site <- lmer(log(N_21)~litter_kg_m2_mean+herb_kg_m2_mean+som_kg_m2_mean+som_kg_m2_mean:site+litter_kg_m2_mean:site+herb_kg_m2_mean:site+(1|plot.unq),data=pri_cn_rep)
+anova(N_21_litter_herb_som_site)
+summary(N_21_litter_herb_som_site)
+plot(N_21_litter_herb_som_site)
+qqnorm(resid(N_21_litter_herb_som_site))  
+qqline(resid(N_21_litter_herb_som_site))
+```
+
+
+litter and herb effects on soil by site d13c 2021 NO EFFECT 
+
+```{r}
+d13c_21_litter_herb_som_site <- lmer(d13c_21~litter_kg_m2_mean+herb_kg_m2_mean+som_kg_m2_mean+som_kg_m2_mean:site+litter_kg_m2_mean:site+herb_kg_m2_mean:site+(1|plot.unq),data=pri_cn_rep)
+anova(d13c_21_litter_herb_som_site)
+summary(d13c_21_litter_herb_som_site)
+plot(d13c_21_litter_herb_som_site)
+qqnorm(resid(d13c_21_litter_herb_som_site))  
+qqline(resid(d13c_21_litter_herb_som_site))
+```
+
+litter and herb effects on soil by site d15n 2021 NO EFFECT 
+```{r}
+d15n_21_litter_herb_som_site <- lmer(d15n_21~litter_kg_m2_mean+herb_kg_m2_mean+som_kg_m2_mean+som_kg_m2_mean:site+litter_kg_m2_mean:site+herb_kg_m2_mean:site+(1|plot.unq),data=pri_cn_rep)
+anova(d15n_21_litter_herb_som_site)
+summary(d15n_21_litter_herb_som_site)
+plot(d15n_21_litter_herb_som_site)
+qqnorm(resid(d15n_21_litter_herb_som_site))  
+qqline(resid(d15n_21_litter_herb_som_site))
+```
+
+
+
+##################################################
+SOIL 2018 PITS EFFECTS OF TREATMENTS STATS
+
+soil C 2018
+```{r}
+names(pri_cn_rep)
+soilC_2018 <- lmer(log(X18_mg.c.gsoil)~n.treat*weevil+(1|plot.unq),data=pri_cn_rep)
+anova(soilC_2018)
+summary(soilC_2018)
+plot(soilC_2018)
+qqnorm(resid(soilC_2018))  
+qqline(resid(soilC_2018))
+```
+
+soil N 2018
+```{r}
+soilN_2018 <- lmer(log(N_18)~n.treat*weevil*site+(1|plot.unq),data=pri_cn_rep)
+anova(soilN_2018)
+summary(soilN_2018)
+plot(soilN_2018)
+qqnorm(resid(soilN_2018))  
+qqline(resid(soilN_2018))
+```
